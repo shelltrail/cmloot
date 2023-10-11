@@ -113,23 +113,18 @@ def main():
                 files = []
                 objects = smbClient.listPath("SCCMContentLib$", targetfolder + "\\*")
                 for i in objects:
-                    if not "filesize=0" in str(i):
-                        i = str(i).split("longname=\"")[1]
-                        i = str(i).split("\", filesize=")[0]
-                        i = str(i).strip('.INI')
-                        file = "\\\\" + address + "\\SCCMContentLib$\\" + targetfolder + "\\" + i + "\n"
+                    if i._SharedFile__filesize != 0:
+                        file = "\\\\" + address + "\\SCCMContentLib$\\" + targetfolder + "\\" + i._SharedFile__shortname.removesuffix('.INI') + "\n"
                         files.append(file)
                 #print(''.join(files))
                 return files
-            
+
             def get_folders_in_folder(targetfolder):
                 folders = []
                 objects = smbClient.listPath("SCCMContentLib$", targetfolder + "\\*")
                 for i in objects:
-                    if "filesize=0" in str(i) and not "shortname=\"." in str(i):
-                        i = str(i).split("longname=\"")[1]
-                        i = str(i).split("\", filesize=")[0]
-                        folder = "\\\\" + address + "\\SCCMContentLib$\\" + targetfolder + "\\" + i + "\n"
+                    if i._SharedFile__filesize == 0 and i._SharedFile__shortname not in (".", ".."):
+                        folder = "\\\\" + address + "\\SCCMContentLib$\\" + targetfolder + "\\" + i._SharedFile__shortname + "\n"
                         folders.append(folder)
                 #print(''.join(folders))
                 return folders
