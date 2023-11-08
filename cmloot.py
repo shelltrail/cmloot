@@ -67,7 +67,7 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
                 if os.path.exists(inventory_file) and not appendToInv:
                     print("[+]", inventory_file, "exists. Remove it if you want to recreate the inventory.")
                     return
-                elif os.path.exists(inventory_file) and not appendToInv:
+                elif os.path.exists(inventory_file) and appendToInv:
                     print("[+]", inventory_file, "exists. Appending to it.")
 
 
