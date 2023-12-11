@@ -73,7 +73,7 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
 
                 # test connection
                 smbClient.connectTree("SCCMContentLib$")
-                print("[+] Access to SCCMContentLib\n")
+                print("[+] Access to SCCMContentLib")
 
                 # find all files in all folders
                 for folders in get_folders_in_folder("DataLib"):
@@ -242,8 +242,9 @@ def main():
         print("[+] Found", len(targets), "targets.")
         for t in targets:
             t = t.replace("\r", "").replace("\n", "").strip()
-            print("[+] Using target", t, ".")
+            print("[+] Using target", t)
             address = t
+            options.target_ip = t
             connect_to_sccm(address, username, password, domain, lmhash, nthash, options, True)
     else:
         connect_to_sccm(address, username, password, domain, lmhash, nthash, options, False)
