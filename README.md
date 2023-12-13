@@ -4,6 +4,8 @@ For more information refer to https://www.shelltrail.com/research/cmloot/
 
 ## Examples
 
+Enumerate Configuration Manager servers:
+
 ```console
 user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@not_needed -findsccmservers
 Impacket v0.12.0.dev1+20231114.165227.4b56c18a - Copyright 2023 Fortra
