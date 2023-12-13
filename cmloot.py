@@ -30,6 +30,7 @@ from impacket.smbconnection import SMBConnection
 import os
 import re
 from io import BytesIO
+from ldap3 import Server, Connection, ALL
 
 def connect_to_sccm(address, username, password, domain, lmhash, nthash, options, appendToInv):
     try:
@@ -73,7 +74,7 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
 
                 # test connection
                 smbClient.connectTree("SCCMContentLib$")
-                print("[+] Access to SCCMContentLib")
+                print("[+] Access to SCCMContentLib on", address)
 
                 # find all files in all folders
                 for folders in get_folders_in_folder("DataLib"):
@@ -93,7 +94,11 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
                                 files = get_files_in_folder(folders)
                                 for file in files:
                                     write_to_file(file)
-                print("[+]", inventory_file, "created")
+                if options.target_file:
+                    sort_and_uniq_file(inventory_file)
+                    print("[+]", inventory_file, "created, sorted and uniqed")
+                else: 
+                    print("[+]", inventory_file, "created")
 
             def downloadfiles():
                 # download interesting file
@@ -159,6 +164,63 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
             traceback.print_exc()
         logging.error(str(e))
 
+def find_sccm_servers(domain, username, password, ldap_port):
+    """
+    Finds Configuration Manager server via LDAP query and writes to file
+    """
+    filename = "./sccmhosts.txt"
+    ldap_server = domain  
+    ldap_user = username + "@" + domain
+    base_dn = fqdn_to_base_dn(domain)
+    try:
+        server = Server(domain, port=ldap_port, get_info=ALL)
+        with Connection(server, ldap_user, password, auto_bind=True) as conn:
+            # Define the search parameters
+            search_filter = '(objectclass=mSSMSManagementPoint)'
+            search_attribute = ['mSSMSMPName'] 
+            # Perform the search
+            conn.search(base_dn, search_filter, attributes=search_attribute)
+            sccm_hosts = []
+            for entry in conn.entries:
+                mssmsmp_name = entry.mSSMSMPName
+                if mssmsmp_name:
+                    sccm_hosts += mssmsmp_name
+        wf = open(filename,'w')
+        for host in sccm_hosts:
+            wf.write(host + "\n")
+        wf.close()
+        print("[+] Found", len(sccm_hosts), "SCCM targets. ( Written to", filename,")\n")
+    except Exception as e:
+        if logging.getLogger().level == logging.DEBUG:
+            import traceback
+            traceback.print_exc()
+        logging.error(str(e))
+
+def fqdn_to_base_dn(fqdn):
+    """
+    Convert a Fully Qualified Domain Name (FQDN) to a Base DN (Distinguished Name) format.
+    """
+    components = fqdn.split('.')
+    base_dn_components = [f"DC={component}" for component in components]
+    base_dn = ','.join(base_dn_components)
+    return base_dn.upper()
+
+def sort_and_uniq_file(file_path):
+    """
+    Sort the contents of a file and remove duplicates (ignoring case).
+    """
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+        file.close()
+        lower_to_original = {line.lower(): line for line in lines}
+        sorted_unique_lines = sorted(lower_to_original.keys())
+        with open(file_path, 'w') as file:
+            for line in sorted_unique_lines:
+                file.write(lower_to_original[line])
+    except IOError as e:
+        print(f"An error occurred: {e}")
+
 def main():
     # Init the example's logger theme
     logger.init()
@@ -171,7 +233,7 @@ def main():
     group = parser.add_argument_group('cmloot')
     group.add_argument('-cmlootinventory', default="sccmfiles.txt", action='store', help='File to store all indexed filepaths found in DataLib folder. Default: sccmfiles.txt', metavar = "sccmfiles.txt")
     group.add_argument('-cmlootdownload', action='store', help='Start downloading files from inventory file. Ex: -cmlootdownload sccmfiles.txt', metavar = "sccmfiles.txt")
-    group.add_argument('-extensions', type=str, default=["XML","INI","CONFIG"], nargs='*',  help='Files to download from inventory file. Default: -extensions XML INI CONFIG')
+    group.add_argument('-extensions', type=str, default=["XML","INI","CONFIG","PS1","VBS"], nargs='*',  help='Files to download from inventory file. Default: -extensions XML INI CONFIG')
 
     group = parser.add_argument_group('authentication')
 
@@ -194,8 +256,12 @@ def main():
                             'This is useful when target is the NetBIOS name and you cannot resolve it')
     group.add_argument('-port', choices=['139', '445'], nargs='?', default='445', metavar="destination port",
                        help='Destination port to connect to SMB Server')
-    group.add_argument('-target-file', action='store', metavar="target file",
+    group.add_argument('-target-file', action='store', metavar="target file", 
                        help='File with specifies one target (host) per line. If omitted it will use whatever was specified as target. ')
+    
+    group = parser.add_argument_group('findsccmservers')
+    group.add_argument('-findsccmservers', action='store_true', default=False, help='Finds SCCM servers using LDAP')
+    group.add_argument('-ldapport', action='store', default=389, help='LDAP port. Default 389, LDAPS 636.')
 
     if len(sys.argv)==1:
         parser.print_help()
@@ -230,6 +296,11 @@ def main():
     else:
         lmhash = ''
         nthash = ''
+
+    if options.findsccmservers:
+        find_sccm_servers(domain, username, password, options.ldapport)
+        if not options.target_file:
+            sys.exit(0)
     
     if options.target_file:
         try:
@@ -239,7 +310,7 @@ def main():
                 import traceback
                 traceback.print_exc()
             logging.error(str(e))
-        print("[+] Found", len(targets), "targets.")
+        print("[+] Found", len(targets), "SCCM targets in", options.target_file)
         for t in targets:
             t = t.replace("\r", "").replace("\n", "").strip()
             print("[+] Using target", t)
