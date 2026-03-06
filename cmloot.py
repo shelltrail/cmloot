@@ -137,16 +137,19 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
                                 share = "\\" + share
                                 share = share + ".INI"
                                 # openfile to get Hash
-                                f = BytesIO()
-                                smbClient.getFile("SCCMContentLib$", share, f.write) #, sys.stdout.buffer.write))
-                                content = f.getvalue().decode()
-                                #regexp to extract hash
-                                hashvalue = re.search("Hash[^=]*=([A-Z0-9]+)",content)
-                                hashvalue = hashvalue.group(1)
-                                # create downloadlist tuple <filename>, <hash>
-                                filename = share.split('\\')[-1]
-                                filename = filename.strip('.INI')
-                                downloadlist[hashvalue] = filename
+                                try:
+                                    f = BytesIO()
+                                    smbClient.getFile("SCCMContentLib$", share, f.write) #, sys.stdout.buffer.write))
+                                    content = f.getvalue().decode()
+                                    #regexp to extract hash
+                                    hashvalue = re.search("Hash[^=]*=([A-Z0-9]+)",content)
+                                    hashvalue = hashvalue.group(1)
+                                    # create downloadlist tuple <filename>, <hash>
+                                    filename = share.split('\\')[-1]
+                                    filename = filename.strip('.INI')
+                                    downloadlist[hashvalue] = filename
+                                except Exception as e:
+                                    print(f"[-] Error processing {share}: {e}")
                 #print(downloadlist)
 
                 for hashvalue in downloadlist.keys():
