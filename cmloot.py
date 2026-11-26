@@ -146,10 +146,11 @@ def connect_to_sccm(address, username, password, domain, lmhash, nthash, options
                                     hashvalue = hashvalue.group(1)
                                     # create downloadlist tuple <filename>, <hash>
                                     filename = share.split('\\')[-1]
-                                    filename = filename.strip('.INI')
+                                    filename = filename.removesuffix('.INI')
                                     downloadlist[hashvalue] = filename
                                 except Exception as e:
                                     print(f"[-] Error processing {share}: {e}")
+                                break
                 #print(downloadlist)
 
                 for hashvalue in downloadlist.keys():
